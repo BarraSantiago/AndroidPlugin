@@ -46,6 +46,12 @@ public class Logger {
         SaveLogToFile(formattedLog);
     }
 
+    public String GetLogFilePath() {
+        File file = new File(context.getFilesDir(), LOG_FILE_NAME);
+        return file.getAbsolutePath();
+    }
+    
+
     // Guardar log en archivo
     private void SaveLogToFile(String log) {
         FileOutputStream fos = null;

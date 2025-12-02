@@ -147,16 +147,48 @@ public class UnityConsoleLogger : MonoBehaviour
 #endif
     }
 
-    private void OnReadLogsClicked()
+   private void OnReadLogsClicked()
     {
         string logs = GetAllLogs();
-        if (logsDisplayText != null)
+        if (!logsDisplayText) return;
+        string filePath = GetLogFilePath();
+        logsDisplayText.text = $"<b>Log File Location:</b>\n{filePath}\n\n<b>Logs:</b>\n{logs}";
+            
+        // Force text layout update to calculate correct size
+        logsDisplayText.ForceMeshUpdate();
+            
+        // Expand RectTransform to fit all text content
+        RectTransform textRect = logsDisplayText.GetComponent<RectTransform>();
+        if (textRect != null)
         {
-            logsDisplayText.text = logs;
-            Canvas.ForceUpdateCanvases();
-            if (logsScrollRect != null)
-                logsScrollRect.verticalNormalizedPosition = 1f;
+            // Get the preferred height of the text
+            float preferredHeight = logsDisplayText.preferredHeight;
+                
+            // Set the height to accommodate all text
+            textRect.sizeDelta = new Vector2(textRect.sizeDelta.x, preferredHeight);
         }
+            
+        // Force canvas update before scrolling
+        Canvas.ForceUpdateCanvases();
+            
+        // Scroll to top (1f = top, 0f = bottom in Unity UI)
+        if (logsScrollRect)
+        {
+            logsScrollRect.verticalNormalizedPosition = 1f;
+        }
+    }
+    
+    
+    
+    private string GetLogFilePath()
+    {
+    #if UNITY_ANDROID && !UNITY_EDITOR
+        if (isInitialized && loggerInstance != null)
+        {
+            return loggerInstance.Call<string>("GetLogFilePath");
+        }
+    #endif
+        return "Path unavailable";
     }
 
     private void OnClearLogsClicked()
@@ -166,6 +198,10 @@ public class UnityConsoleLogger : MonoBehaviour
 
     public string GetAllLogs()
     {
+        for (int i = 0; i < 50; i++)
+        {
+            Debug.Log("Test log" + i);
+        }
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (!isInitialized || loggerInstance == null)
             return "Logger not initialized";
@@ -202,12 +238,35 @@ public class UnityConsoleLogger : MonoBehaviour
 
     private void OnLogsCleared(bool success)
     {
-        if (success && logsDisplayText != null)
+        if (!logsDisplayText) return;
+        if (success)
         {
+            // Clear the text display
             logsDisplayText.text = "Logs cleared successfully";
+                
+            // Reset the text size to default/minimal
+            RectTransform textRect = logsDisplayText.GetComponent<RectTransform>();
+            if (textRect)
+            {
+                // Reset to a small default height
+                textRect.sizeDelta = new Vector2(textRect.sizeDelta.x, 100f);
+            }
+        }
+        else
+        {
+            logsDisplayText.text = "Failed to clear logs or operation cancelled";
+        }
+            
+        // Force canvas update
+        Canvas.ForceUpdateCanvases();
+            
+        // Reset scroll position
+        if (logsScrollRect)
+        {
+            logsScrollRect.verticalNormalizedPosition = 1f;
         }
     }
-
+    
     private class ClearLogsCallback : AndroidJavaProxy
     {
         private UnityConsoleLogger logger;
