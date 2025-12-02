@@ -19,9 +19,12 @@ public class Logger {
     private static final String LOG_FILE_NAME = "unity_logs.txt";
     private static Logger _instance;
     private Context context;
-
+    private android.app.Activity activity;
     private Logger(Context context) {
         this.context = context.getApplicationContext();
+        if (context instanceof android.app.Activity) {
+            this.activity = (android.app.Activity) context;
+        }
     }
 
     public static void Initialize(Context context) {
@@ -29,6 +32,7 @@ public class Logger {
             _instance = new Logger(context);
         }
     }
+
 
     public static Logger getInstance() {
         if (_instance == null) {
@@ -50,7 +54,7 @@ public class Logger {
         File file = new File(context.getFilesDir(), LOG_FILE_NAME);
         return file.getAbsolutePath();
     }
-    
+
 
     // Guardar log en archivo
     private void SaveLogToFile(String log) {
@@ -108,31 +112,36 @@ public class Logger {
 
     // Mostrar alerta de verificación antes de borrar logs
     public void ShowClearLogsAlert(final OnClearLogsListener listener) {
-        if (context instanceof android.app.Activity) {
-            final android.app.Activity activity = (android.app.Activity) context;
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    new AlertDialog.Builder(activity)
-                            .setTitle("Clear Logs")
-                            .setMessage("Are you sure you want to delete all logs? This action cannot be undone.")
-                            .setPositiveButton("Yes", (dialog, which) -> {
-                                boolean success = ClearLogs();
-                                if (listener != null) {
-                                    listener.onClearLogsResult(success);
-                                }
-                            })
-                            .setNegativeButton("No", (dialog, which) -> {
-                                dialog.dismiss();
-                                if (listener != null) {
-                                    listener.onClearLogsResult(false);
-                                }
-                            })
-                            .setCancelable(false)
-                            .show();
-                }
-            });
+        if (activity == null) {
+            // Fallback: call listener with false
+            if (listener != null) {
+                listener.onClearLogsResult(false);
+            }
+            return;
         }
+
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                new AlertDialog.Builder(activity)
+                        .setTitle("Clear Logs")
+                        .setMessage("Are you sure you want to delete all logs?")
+                        .setPositiveButton("Yes", (dialog, which) -> {
+                            boolean success = ClearLogs();
+                            if (listener != null) {
+                                listener.onClearLogsResult(success);
+                            }
+                        })
+                        .setNegativeButton("No", (dialog, which) -> {
+                            dialog.dismiss();
+                            if (listener != null) {
+                                listener.onClearLogsResult(false);
+                            }
+                        })
+                        .setCancelable(false)
+                        .show();
+            }
+        });
     }
 
     // Borrar archivo de logs
